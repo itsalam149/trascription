@@ -1,12 +1,12 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import uuid
-import subprocess
 import librosa
 import numpy as np
+
 
 from app.audio_utils import convert_mp4_to_mp3
 from app.assembly_ai import upload_file, request_transcription, get_transcription_result
@@ -62,33 +62,6 @@ async def transcribe_video(file: UploadFile = File(...)):
         os.remove(video_path)
         raise HTTPException(status_code=500, detail=f"Audio conversion failed: {str(e)}")
 
-    return await transcribe_audio_common(audio_path, video_path)
-
-
-@app.post("/transcribe-from-url")
-async def transcribe_from_url(request: Request):
-    data = await request.json()
-    url = data.get("url")
-    if not url:
-        raise HTTPException(status_code=400, detail="Missing video URL")
-
-    audio_filename = f"{uuid.uuid4()}.mp3"
-    audio_path = os.path.join(AUDIO_DIR, audio_filename)
-
-    try:
-        # Use yt-dlp to download and extract audio as mp3
-        command = [
-            "yt-dlp", "-x", "--audio-format", "mp3",
-            "-o", audio_path, url
-        ]
-        subprocess.run(command, check=True)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
-
-    return await transcribe_audio_common(audio_path)
-
-
-async def transcribe_audio_common(audio_path: str, video_path: str = None):
     try:
         audio_url = upload_file(audio_path)
         transcript_id = request_transcription(audio_url)
@@ -96,13 +69,10 @@ async def transcribe_audio_common(audio_path: str, video_path: str = None):
             raise Exception("No transcript ID returned")
         result = get_transcription_result(transcript_id)
     except Exception as e:
-        if video_path and os.path.exists(video_path):
-            os.remove(video_path)
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
+        os.remove(video_path)
+        os.remove(audio_path)
         raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
-    # Compute energy from audio
     try:
         y, sr = librosa.load(audio_path)
         frame_length = 2048
@@ -123,8 +93,7 @@ async def transcribe_audio_common(audio_path: str, video_path: str = None):
     except Exception as e:
         print("Energy computation failed:", e)
 
-    if video_path and os.path.exists(video_path):
-        os.remove(video_path)
+    os.remove(video_path)
 
     return JSONResponse(content={
         "transcription": result,
