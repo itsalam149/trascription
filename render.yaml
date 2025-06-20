@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: transcroption-app
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --reload
+    envVars:
+      - key: ASSEMBLYAI_API_KEY
+        value: 5360e1edddb74d48aa3bc0d9b9a0731b
