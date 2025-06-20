@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Transcriber</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+        color: #f0f0f0;
+        margin: 0;
+        padding: 50px 20px;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        color: #ffffff;
+        margin-bottom: 30px;
+      }
+
+      input[type="file"] {
+        padding: 10px;
+        margin: 20px 0;
+        background-color: #222;
+        border: 1px solid #555;
+        border-radius: 5px;
+        color: #ccc;
+      }
+
+      button {
+        background-color: #4f46e5;
+        color: white;
+        padding: 10px 20px;
+        margin: 10px 5px;
+        border: none;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      button:hover {
+        background-color: #3730a3;
+      }
+
+      .result {
+        margin-top: 30px;
+        background-color: #1e1e1e;
+        padding: 20px;
+        border-radius: 12px;
+        max-width: 900px;
+        height: 400px;
+        overflow-y: auto;
+        margin-left: auto;
+        margin-right: auto;
+        text-align: left;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+      }
+
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+
+      #downloadBtn,
+      #downloadMp3Btn {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🎬 Video Transcriber with Energy Score</h1>
+
+    <input type="file" id="fileInput" accept=".mp4" />
+    <br />
+    <button onclick="uploadVideo()">Upload & Transcribe</button>
+    <button id="downloadBtn" onclick="downloadJson()">Download JSON</button>
+    <button id="downloadMp3Btn">Download MP3</button>
+
+    <div class="result" id="result" style="display: none">
+      <h2>📋 Transcription Result:</h2>
+      <pre id="jsonOutput"></pre>
+    </div>
+
+    <script>
+      let currentJson = null;
+
+      async function uploadVideo() {
+        const fileInput = document.getElementById("fileInput");
+        const resultDiv = document.getElementById("result");
+        const jsonOutput = document.getElementById("jsonOutput");
+        const downloadBtn = document.getElementById("downloadBtn");
+        const downloadMp3Btn = document.getElementById("downloadMp3Btn");
+
+        resultDiv.style.display = "none";
+        downloadBtn.style.display = "none";
+        downloadMp3Btn.style.display = "none";
+        jsonOutput.textContent = "";
+
+        if (!fileInput.files.length) {
+          alert("Please select an MP4 file.");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        try {
+          resultDiv.style.display = "block";
+          jsonOutput.textContent = "⏳ Transcribing your video, please wait...";
+
+          const response = await fetch("/transcribe-video", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Something went wrong.");
+          }
+
+          const data = await response.json();
+          currentJson = data.transcription;
+
+          jsonOutput.textContent = JSON.stringify(currentJson, null, 2);
+          downloadBtn.style.display = "inline-block";
+          downloadMp3Btn.style.display = "inline-block";
+
+          downloadMp3Btn.onclick = () => window.open(data.audio_path, "_blank");
+        } catch (error) {
+          jsonOutput.textContent = "❌ Error: " + error.message;
+        }
+      }
+
+      function downloadJson() {
+        if (!currentJson) return;
+        const blob = new Blob([JSON.stringify(currentJson, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "transcription.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    </script>
+  </body>
+</html>

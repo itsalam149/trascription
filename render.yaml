@@ -1,9 +1,11 @@
 services:
   - type: web
-    name: transcroption-app
+    name: video-transcriber
     env: python
+    region: oregon # Optional: can also be frankfurt, singapore, etc.
+    plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --reload
+    startCommand: uvicorn main:app --reload
     envVars:
-      - key: ASSEMBLYAI_API_KEY
-        value: 5360e1edddb74d48aa3bc0d9b9a0731b
+      - key: ASSEMBLY_AI_API_KEY
+        sync: false

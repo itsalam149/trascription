@@ -1,5 +1,9 @@
 fastapi
 uvicorn
-requests
 python-multipart
-ffmpeg-python 
+requests
+python-dotenv
+librosa
+numpy
+matplotlib
+ffmpeg-python
