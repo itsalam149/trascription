@@ -7,3 +7,4 @@ librosa
 numpy
 matplotlib
 ffmpeg-python
+yt-dlp
